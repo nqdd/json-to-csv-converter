@@ -118,7 +118,7 @@ export default function JSONToCSVConverter() {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
+    <div className="container mx-auto p-4 max-w-10xl">
       <h1 className="text-3xl font-bold mb-6 text-center">
         JSON to CSV Converter
       </h1>
