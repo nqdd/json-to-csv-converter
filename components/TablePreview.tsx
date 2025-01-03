@@ -22,7 +22,9 @@ export default function TablePreview({ csvData }: TablePreviewProps) {
         <TableHeader>
           <TableRow>
             {headers.map((header, index) => (
-              <TableHead key={index}>{header}</TableHead>
+              <TableHead key={index} className="whitespace-nowrap">
+                {header}
+              </TableHead>
             ))}
           </TableRow>
         </TableHeader>

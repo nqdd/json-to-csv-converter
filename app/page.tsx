@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
 import JSONInput from '@/components/JSONInput';
-import ColumnSelector from '@/components/ColumnSelector';
-import ConvertButton from '@/components/ConvertButton';
 import ResultDisplay from '@/components/ResultDisplay';
+import ConvertButton from '@/components/ConvertButton';
 
 const LOCAL_STORAGE_KEY = 'jsonToCsvSelectedColumns';
 
@@ -19,12 +20,44 @@ export default function JSONToCSVConverter() {
   });
   const [csvResult, setCsvResult] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [availableColumns, setAvailableColumns] = useState<string[]>([]);
+  const [currentTab, setCurrentTab] = useState<string>('input');
+  const hasSetDefaultColumns = useRef<boolean>(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(selectedColumns));
     }
   }, [selectedColumns]);
+
+  useEffect(() => {
+    const columns = new Set<string>();
+    jsonInputs.forEach((input) => {
+      try {
+        const data = JSON.parse(input);
+        if (Array.isArray(data)) {
+          data.forEach((item) => {
+            Object.keys(item).forEach((key) => columns.add(key));
+          });
+        } else {
+          Object.keys(data).forEach((key) => columns.add(key));
+        }
+      } catch (error) {
+        console.error(error);
+        // Ignore invalid JSON
+      }
+    });
+    const sortedColumns = Array.from(columns).sort((a, b) =>
+      a.localeCompare(b)
+    );
+    setAvailableColumns(sortedColumns);
+
+    // Default select all columns if none are selected
+    if (!hasSetDefaultColumns.current && selectedColumns.length === 0) {
+      setSelectedColumns(sortedColumns);
+    }
+    hasSetDefaultColumns.current = true;
+  }, [jsonInputs, selectedColumns.length]);
 
   const addJsonInput = () => {
     setJsonInputs([...jsonInputs, '']);
@@ -43,23 +76,17 @@ export default function JSONToCSVConverter() {
 
   const convertToCSV = () => {
     try {
-      // Merge all JSON inputs
       const mergedData = jsonInputs.map((input) => JSON.parse(input)).flat();
 
       if (mergedData.length === 0) {
         throw new Error('No valid JSON data provided');
       }
 
-      // Get all unique keys from the merged data
-      const allKeys = Array.from(new Set(mergedData.flatMap(Object.keys)));
+      const keys =
+        selectedColumns.length > 0 ? selectedColumns : availableColumns;
 
-      // Filter keys based on selected columns, or use all if none selected
-      const keys = selectedColumns.length > 0 ? selectedColumns : allKeys;
-
-      // Create CSV header
       let csv = keys.join(',') + '\n';
 
-      // Add data rows
       csv += mergedData
         .map((row) => {
           return keys
@@ -83,6 +110,7 @@ export default function JSONToCSVConverter() {
 
       setCsvResult(csv);
       setError('');
+      setCurrentTab('result');
     } catch (err) {
       setError('Error converting JSON to CSV: ' + (err as Error).message);
       setCsvResult('');
@@ -90,27 +118,45 @@ export default function JSONToCSVConverter() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">JSON to CSV Converter</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <JSONInput
-            jsonInputs={jsonInputs}
-            updateJsonInput={updateJsonInput}
-            addJsonInput={addJsonInput}
-            removeJsonInput={removeJsonInput}
-          />
-          <ColumnSelector
-            jsonInputs={jsonInputs}
-            selectedColumns={selectedColumns}
-            setSelectedColumns={setSelectedColumns}
-          />
-          <ConvertButton onConvert={convertToCSV} />
-        </div>
-        <div>
-          <ResultDisplay csvResult={csvResult} error={error} />
-        </div>
-      </div>
+    <div className="container mx-auto p-4 max-w-4xl">
+      <h1 className="text-3xl font-bold mb-6 text-center">
+        JSON to CSV Converter
+      </h1>
+      <Card>
+        <CardContent className="p-6">
+          <Tabs
+            value={currentTab}
+            onValueChange={(value) => setCurrentTab(value)}
+            defaultValue="input"
+            className="space-y-4"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="input">JSON Input</TabsTrigger>
+              <TabsTrigger value="result">CSV Result</TabsTrigger>
+            </TabsList>
+            <TabsContent value="input">
+              <JSONInput
+                jsonInputs={jsonInputs}
+                updateJsonInput={updateJsonInput}
+                addJsonInput={addJsonInput}
+                removeJsonInput={removeJsonInput}
+              />
+            </TabsContent>
+            <TabsContent value="result">
+              <ResultDisplay
+                csvResult={csvResult}
+                error={error}
+                availableColumns={availableColumns}
+                selectedColumns={selectedColumns}
+                setSelectedColumns={setSelectedColumns}
+              />
+            </TabsContent>
+          </Tabs>
+          <div className="mt-6">
+            <ConvertButton onConvert={convertToCSV} />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

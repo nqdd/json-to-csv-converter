@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 
 interface ColumnSelectorProps {
   jsonInputs: string[];
@@ -14,6 +17,7 @@ export default function ColumnSelector({
   setSelectedColumns,
 }: ColumnSelectorProps) {
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const columns = new Set<string>();
@@ -61,32 +65,42 @@ export default function ColumnSelector({
     setSelectedColumns([]);
   };
 
+  const filteredColumns = availableColumns.filter((column) =>
+    column.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="mb-4">
+    <div className="space-y-4">
       <h2 className="text-xl font-semibold mb-2">Select Columns</h2>
-      <div className="mb-2">
-        <button
-          onClick={handleSelectAll}
-          className="mr-2 px-2 py-1 bg-blue-500 text-white rounded"
-        >
+      <div className="flex space-x-2">
+        <Button onClick={handleSelectAll} variant="outline" size="sm">
           Select All
-        </button>
-        <button
-          onClick={handleDeselectAll}
-          className="px-2 py-1 bg-gray-500 text-white rounded"
-        >
+        </Button>
+        <Button onClick={handleDeselectAll} variant="outline" size="sm">
           Deselect All
-        </button>
+        </Button>
       </div>
-      <div className="flex flex-wrap gap-4">
-        {availableColumns.map((column) => (
+      <div className="relative">
+        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Search columns..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-8"
+        />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[300px] overflow-y-auto">
+        {filteredColumns.map((column) => (
           <div key={column} className="flex items-center space-x-2">
             <Checkbox
               id={column}
               checked={selectedColumns.includes(column)}
               onCheckedChange={() => handleColumnToggle(column)}
             />
-            <Label htmlFor={column}>{column}</Label>
+            <Label htmlFor={column} className="text-sm">
+              {column}
+            </Label>
           </div>
         ))}
       </div>
